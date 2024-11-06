@@ -9,8 +9,6 @@
 import rospy
 import sys
 
-
-
 # We're going to do some math
 import numpy as np
 
@@ -33,8 +31,8 @@ def callback(scan):
 	# Pulling out some useful values from scan
 	angle_min = scan.angle_min
 	angle_max = scan.angle_max
-	num_readings = len(scan.ranges) # ranges is a np array, the distances as you go around from min to max, scan.ranges is the r
-	#sin(theta) * r is the y distance all that
+	num_readings = len(scan.ranges)
+
 	# Doing this for you - get out theta values for each range/distance reading
 	thetas = np.linspace(angle_min, angle_max, num_readings)
 
@@ -43,7 +41,7 @@ def callback(scan):
 	#    Remember that robot scans are in the robot's coordinate system - theta = 0 means straight ahead
 	#  Step 2: Get the minimum distance to the closest object (use only scans "in front of" the robot)
 	#  Step 3: Use the closest distance from above to decide when to stop
-	#  Step 4: Scale how fast you move by the distance to the closet object (tanh is handy here...)
+	#  Step 4: Scale how fast you move by the distance to the closest object (tanh is handy here...)
 	#  Step 5: Make sure to actually stop if close to 1 m
 	# Finally, set t.linear.x to be your desired speed (0 if stop)
 	# Suggestion: Do this with a for loop before being fancy with numpy (which is substantially faster)
@@ -51,21 +49,45 @@ def callback(scan):
 
 	# Create a twist and fill in all the fields (you will only set t.linear.x).
 	t = Twist()
-	t.linear.x = 0.0 #if 0, robot will not move so it's how fast you move fwd
+	t.linear.x = 3.0 #/ how fast you move fwd
 	t.linear.y = 0.0
 	t.linear.z = 0.0
 	t.angular.x = 0.0
 	t.angular.y = 0.0
-	t.angular.z = 0.0 #how fast you turn
+	t.angular.z = 0.0 #/ how fast you turn
 
-	shortest = 0 #can set to closest thing you found in front of you ?
+	#shortest = 0 #/ apparently you can set this to the closest thing youll let near you?
  # YOUR CODE HERE
+	bot_width = .38 #m
+	r_stop = 1 + bot_width/2 #m, so 1.19m
+	v_max = .30 #m/s
+	t_to_stop = 3 #s responsiveness -- time required to stop
+	d_slow_down = v_max * t_to_stop
+	
+	#relevant_rs = np.array
+	y_dists = np.zeros(num_readings)
+	#x_dists = np.zeros(num_readings)
+	relevant_rs = []
+	for i, r in enumerate(scan.ranges):
+		y_dists[i] = r * np.sin(thetas[i]) #thetas in radians
+		#x_dists[i] = r * np.cos(thetas[i])
+		if abs(y_dists[i]) <= bot_width:
+			#obstruction found in front of bot
+			relevant_rs.append(r)
+	shortest = min(relevant_rs)
 
+	if shortest <= r_stop:
+		t.linear.x = 0
+	else:
+		t.linear.x = v_max * (1 + np.tanh((shortest - r_stop) / d_slow_down))
 	# Send the command to the robot.
 	publisher.publish(t)
 
 	# Print out a log message to the INFO channel to let us know it's working.
 	rospy.loginfo(f'Shortest: {shortest} => {t.linear.x}')
+	#rospy.loginfo(f'angle_min = {angle_min} angle_max = {angle_max}')
+	#rospy.loginfo(f'num_readings = {num_readings}')
+	#rospy.loginfo(f'thetas = {thetas}')
 
 
 if __name__ == '__main__':
