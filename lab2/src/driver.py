@@ -3,7 +3,7 @@
 
 import rospy
 import sys
-
+import numpy as np
 from math import atan2, tanh, sqrt, pi
 
 from nav_msgs.msg import Odometry
@@ -144,7 +144,71 @@ class Driver:
 		command.angular.z = 0.1
 
   # YOUR CODE HERE
+		# prepping the lidar's thetas for later use
+		angle_min, angle_max, num_readings = lidar.angle_min, lidar.angle_max, len(lidar.ranges)
+		thetas = np.linspace(angle_min, angle_max, num_readings) # the lidar's thetas (consistent)
+		front_mindex, front_maxdex = round(num_readings / 4), round(3 * num_readings / 4)
+		thetas_front = thetas[front_mindex : front_maxdex]
 
+		# prepping target stuff
+		target_x, target_y = target
+		theta_g = atan2(target_y, target_x)
+		
+		# prepping bot characteristics
+		bot_width = 0.38 #m
+		lidar_max = 8
+
+			# for moving fwd
+		r_stop = 1.19 #m instead of  1.19m from last assignment
+		v_max = 0.30 #m/s # max fwd velocity
+		t_to_stop = 3 #s # change this to vary responsiveness -- time required to stop
+		d_slow_down = v_max * t_to_stop # distance bot will slow to a stop
+
+			# for rotating
+		turn_radius = bot_width + self.threshold
+		omega_max = v_max / turn_radius
+
+		# figuring out shortest distance to an obstruction within the relevant front of lidar scope
+		y_dists, relevant_rs, relevant_thetas = np.zeros(num_readings), [],[]
+		for i, r in enumerate(lidar.ranges[front_mindex:front_maxdex]):
+			y_dists[i] = r * np.sin(thetas_front[i])
+			if abs(y_dists[i]) <= r_stop:
+				#obstruction found in front of bot
+				relevant_rs.append(r)
+				relevant_thetas.append(thetas_front[i])
+		if relevant_rs:
+			shortest = min(relevant_rs)
+			theta_shortest_i = relevant_rs.index(shortest)
+			bot_theta_obj = relevant_thetas[theta_shortest_i]
+
+		else:
+			shortest = lidar_max # no obstacles within safety zone -- if doesn't work use float('inf')
+			bot_theta_obj = thetas[-1]
+		# default commands
+		command.linear.x = v_max
+		command.angular.z = 0
+		
+		distance = sqrt(target_x ** 2 + target_y ** 2)
+
+		#elif lidar.ranges[bot_theta_i] < distance and lidar.ranges[bot_theta_i] < 8:
+		if shortest < d_slow_down:
+		#if not out of range of lidar and there IS an obstruction between bot and target
+			# move around obstruction at a reasonable speed
+			command.linear.x = v_max *  tanh(shortest / d_slow_down)
+			command.angular.z =  tanh(-bot_theta_obj/turn_radius)
+			if shortest <  turn_radius: #im about to hit it
+				command.linear.x = 0
+				#command.angular.z = 
+				#if thetas[bot_theta_i] > 0:
+				#	command.angular.z += omega_max
+				#else: #theta_g <= 0
+				#	command.angular.z += -omega_max
+			#command.angular.z = -omega_max * np.tanh((r_stop - shortest) / turn_radius) # turn away from obstruction
+		else: 
+		#if nothing between bot and goal
+			 #move to goal, turning while moving
+			command.linear.x = v_max *  (tanh(distance/d_slow_down))
+			command.angular.z = tanh(theta_g/turn_radius) #bc it's pov of bot, so theta_pov = 0 always
 		return command
 
 if __name__ == '__main__':
