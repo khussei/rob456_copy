@@ -23,7 +23,7 @@ class Driver:
 		# Goal will be set later. The action server will set the goal; you don't set it directly
 		self.goal = None
 		self.threshold = threshold
-
+		self.count_veer = 0 #tracks veering actions to avoid rapid direction changes
 		self.transform_listener = tf.TransformListener()
 
 		# Publisher before subscriber
@@ -174,7 +174,7 @@ class Driver:
 					relevant_rs.append(r)
 					relevant_thetas.append(thetas[i])
 		unbounded_shortest = min(lidar.ranges, default=params['lidar_max'])
-		bot_unbounded_lidar_theta = thetas[lidar.ranges.index(unbounded_shortest)] if lidar.ranges else thetas[-1]
+		#bot_unbounded_lidar_theta = thetas[lidar.ranges.index(unbounded_shortest)] if lidar.ranges else thetas[-1]
 		shortest = min(relevant_rs, default=params['lidar_max'])
 		bot_theta_obj = relevant_thetas[relevant_rs.index(shortest)] if relevant_rs else thetas[-1]
 		
@@ -182,27 +182,33 @@ class Driver:
 		command.linear.x = params['v_max']
 		command.angular.z = 0
 		distance = sqrt(target_x ** 2 + target_y ** 2)
-		count_veer = 0
+		
+		# Obstacle avoidance logic
+		reset_veer = False
 		if shortest < d_slow_down:
-		#if not out of range of lidar and there IS an obstruction between bot and target
-			# move around obstruction at a reasonable speed
-			print(f"obstruction found")
-			count_veer = 3
-			command.linear.x = params['v_max'] *  tanh(shortest / d_slow_down)
-			command.angular.z =  tanh(-bot_theta_obj/turn_radius)
+        	# obstacle in front
+			print("obstruction directly in front")
+			reset_veer = True
+			command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
+			command.angular.z = tanh(-bot_theta_obj / turn_radius)
 		elif unbounded_shortest < turn_radius and distance > unbounded_shortest:
-			count_veer = 3
-			print("too close to the sides!")
-			command.angular.z = -bot_theta_obj * omega_max
-		else: 
-			if count_veer > 0:
-				count_veer -=1
+        	# obstacle on side
+			print("Too close to an obstacle on the side!")
+			reset_veer = True
+			command.angular.z = tanh(-bot_theta_obj / turn_radius)
+		else:
+        	# no obstacles
+			if self.count_veer > 0:
+				self.count_veer -= 1
 			else:
-		#if nothing between bot and goal
-			#move to goal, turning while moving
-				print(f"moving straight towards goal!")
-				command.linear.x = params['v_max'] * tanh(distance/d_slow_down)
-				command.angular.z = tanh(theta_g/turn_radius) #bc it's pov of bot, so theta_pov = 0 always
+				print("moving straight towards the goal!")
+				command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
+				command.angular.z = tanh(theta_g / turn_radius)  # Turn toward the goal
+
+    	# only reset veer if needed
+		if reset_veer and self.count_veer == 0:
+			self.count_veer = 3
+		
 		return command
 
 if __name__ == '__main__':
