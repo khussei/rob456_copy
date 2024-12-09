@@ -132,6 +132,13 @@ class Driver:
 	# 	lidar:	a LaserScan message with the current data from the LiDAR.  Use this for obstacle avoidance.
 	#           This is the same as your go and stop code
 	def get_twist(self, target, lidar):
+		# Bot Parameters:
+		#	lidar_max: lidar captures this distance around bot [m]
+		#	v_max: maximum forward speed [m/s]
+		#	t_to_closest: time to slow down in -- responsiveness [s]
+		#	r_closest: maximum distance allowed to an opject [m]
+		params = {'bot_width':0.38, 'lidar_max': 8.0, 'v_max': 0.30, 't_to_closest': 3, 'r_closest': 1.19}
+		
 		command = Driver.zero_twist()
 
 		# TODO:
@@ -148,49 +155,40 @@ class Driver:
 		angle_min, angle_max, num_readings = lidar.angle_min, lidar.angle_max, len(lidar.ranges)
 		thetas = np.linspace(angle_min, angle_max, num_readings) # the lidar's thetas (consistent)
 		front_mindex, front_maxdex = round(num_readings / 4), round(3 * num_readings / 4)
-		thetas_front = thetas[front_mindex : front_maxdex]
-		# prepping given target and bot stuff
+		# prepping given target
 		target_x, target_y = target
 		theta_g = atan2(target_y, target_x)
-		bot_width, lidar_max = 0.38, 8 #m
-			# for moving fwd
-		r_closest = 1.19 #m had originally wanted it to be bot_width + threshold value
-		v_max = 0.30 #m/s # max fwd velocity
-		t_to_closest = 3 #s # change this to vary responsiveness -- time required to stop
-		d_slow_down = v_max * t_to_closest # distance bot will slow to a stop
-			# for rotating
-		turn_radius =  bot_width * 1.5 #*2
-		omega_max = v_max / turn_radius
+
+		#robot movement calcs from parameters
+		d_slow_down = params['v_max'] * params['t_to_closest'] # distance bot will slow to a stop
+		turn_radius =  params['bot_width'] * 1.5
+		omega_max = params['v_max'] / turn_radius
 
 		# figuring out shortest distance to an obstruction within the relevant front of lidar scope
-		y_dists, all_rs, all_thetas, relevant_rs, relevant_thetas = np.zeros(num_readings), [],[], [], []
+		relevant_rs, relevant_thetas = [],[]
 		for i, r in enumerate(lidar.ranges):
-			y_dists[i] = r * np.sin(thetas[i])
-			if abs(y_dists[i]) <= r_closest:
-				all_rs.append(r)
-				all_thetas.append(thetas[i])
-
+			y_dist = r * np.sin(thetas[i])
+			if abs(y_dist) <= params['r_closest']:
 				if front_mindex <= i < front_maxdex:
 				#obstruction found in front of bot
 					relevant_rs.append(r)
-					relevant_thetas.append(thetas[i]) #thetas_front[i]
-		unbounded_shortest = min(all_rs, default=lidar_max)
-		bot_unbounded_lidar_theta = all_thetas[all_rs.index(unbounded_shortest)] if all_rs else thetas[-1]
-		shortest = min(relevant_rs, default=lidar_max)
+					relevant_thetas.append(thetas[i])
+		unbounded_shortest = min(lidar.ranges, default=params['lidar_max'])
+		bot_unbounded_lidar_theta = thetas[lidar.ranges.index(unbounded_shortest)] if lidar.ranges else thetas[-1]
+		shortest = min(relevant_rs, default=params['lidar_max'])
 		bot_theta_obj = relevant_thetas[relevant_rs.index(shortest)] if relevant_rs else thetas[-1]
+		
 		# default commands and distance to target
-		command.linear.x = v_max
+		command.linear.x = params['v_max']
 		command.angular.z = 0
 		distance = sqrt(target_x ** 2 + target_y ** 2)
-
-		follow_goal = False
 		count_veer = 0
 		if shortest < d_slow_down:
 		#if not out of range of lidar and there IS an obstruction between bot and target
 			# move around obstruction at a reasonable speed
 			print(f"obstruction found")
 			count_veer = 3
-			command.linear.x = v_max *  tanh(shortest / d_slow_down)
+			command.linear.x = params['v_max'] *  tanh(shortest / d_slow_down)
 			command.angular.z =  tanh(-bot_theta_obj/turn_radius)
 		elif unbounded_shortest < turn_radius and distance > unbounded_shortest:
 			count_veer = 3
@@ -200,11 +198,10 @@ class Driver:
 			if count_veer > 0:
 				count_veer -=1
 			else:
-				follow_goal = True
 		#if nothing between bot and goal
 			#move to goal, turning while moving
 				print(f"moving straight towards goal!")
-				command.linear.x = v_max * tanh(distance/d_slow_down)
+				command.linear.x = params['v_max'] * tanh(distance/d_slow_down)
 				command.angular.z = tanh(theta_g/turn_radius) #bc it's pov of bot, so theta_pov = 0 always
 		return command
 
