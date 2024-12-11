@@ -15,7 +15,7 @@ class StudentDriver(Driver):
 	This class implements the logic to move the robot to a specific place in the world.  All of the
 	interesting functionality is hidden in the parent class.
 	'''
-	def __init__(self, threshold=0.1):
+	def __init__(self, threshold=0.5):
 		super().__init__('odom')
 		# Set the threshold to a reasonable number
 		self._threshold = threshold
@@ -92,12 +92,8 @@ class StudentDriver(Driver):
 				#pivot and don't move forward until there is nothing in front of you
 			rospy.loginfo("Too close to an obstacle on the side!")
 			#reset_veer = True
-			command.linear.x = 0
+			command.linear.x = -params['v_max'] * tanh(shortest / d_slow_down)
 			command.angular.z = tanh(-bot_unbounded_lidar_theta)
-			# if abs(bot_theta_obj - thetas[-1]) < 0.5:
-			# 	#if there is no object in the front
-			# 	command.angular.z = 0
-			# 	command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
 		else:
 			rospy.loginfo("nothing in front -- going straight to goal!")
 			command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
