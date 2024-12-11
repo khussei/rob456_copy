@@ -73,7 +73,7 @@ class StudentDriver(Driver):
 		distance = sqrt(target_x ** 2 + target_y ** 2)
 		
 		# obstacle avoidance logic
-		reset_veer = False
+		#reset_veer = False
 		if distance < unbounded_shortest:
 			#if distance to goal is shorter than distance to anything else within lidar ranges
 				#go towards goal!
@@ -83,32 +83,32 @@ class StudentDriver(Driver):
         	# obstacle in front
 				#move away from it
 			print("obstruction directly in front")
-			reset_veer = True
+			#reset_veer = True
 			command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
 			command.angular.z = tanh(-bot_theta_obj)
 		elif unbounded_shortest < params['bot_width']:
         	# obstacle on side
 				#pivot and don't move forward until there is nothing in front of you
 			print("Too close to an obstacle on the side!")
-			reset_veer = True
+			#reset_veer = True
 			command.linear.x = 0
 			command.angular.z = tanh(-bot_unbounded_lidar_theta)
 			if abs(bot_theta_obj - thetas[-1]) < 0.5:
 				#if there is no object in the front
 				command.angular.z = 0
 				command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
-		else:
-        	# no obstacles
-			if self.count_veer > 0:
-				self.count_veer -= 1
-			else:
-				print("moving straight towards the goal!")
-				command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
-				command.angular.z = tanh(theta_g)  # Turn toward the goal
+		# else:
+        # 	# no obstacles
+		# 	if self.count_veer > 0:
+		# 		self.count_veer -= 1
+			# else:
+			# 	print("moving straight towards the goal!")
+			# 	command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
+			# 	command.angular.z = tanh(theta_g)  # Turn toward the goal
 
-    	# only reset veer if needed
-		if reset_veer and self.count_veer == 0:
-			self.count_veer = 3
+    	# # only reset veer if needed
+		# if reset_veer and self.count_veer == 0:
+		# 	self.count_veer = 3
 		
 		return command
 
