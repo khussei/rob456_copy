@@ -52,9 +52,7 @@ class StudentDriver(Driver):
 
 		#robot movement calcs from parameters
 		d_slow_down = params['v_max'] * params['t_to_closest'] # constant -- distance bot will slow to a stop
-		turn_radius =  params['bot_width'] * 1.5
-		omega_max = params['v_max'] / turn_radius
-
+		
 		# figuring out shortest distance to an obstruction within the relevant front of lidar scope
 		relevant_rs, relevant_thetas = [],[]
 		for i, r in enumerate(lidar.ranges):
@@ -78,6 +76,7 @@ class StudentDriver(Driver):
 		reset_veer = False
 		if distance < unbounded_shortest:
 			#if distance to goal is shorter than distance to anything else within lidar ranges
+				#go towards goal!
 			command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
 			command.angular.z = tanh(theta_g)  # Turn toward the goal
 		elif shortest < d_slow_down:
@@ -89,10 +88,13 @@ class StudentDriver(Driver):
 			command.angular.z = tanh(-bot_theta_obj)
 		elif unbounded_shortest < params['bot_width']:
         	# obstacle on side
+				#pivot and don't move forward until there is nothing in front of you
 			print("Too close to an obstacle on the side!")
 			reset_veer = True
+			command.linear.x = 0
 			command.angular.z = tanh(-bot_unbounded_lidar_theta)
 			if abs(bot_theta_obj - thetas[-1]) < 0.5:
+				#if there is no object in the front
 				command.angular.z = 0
 				command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
 		else:
