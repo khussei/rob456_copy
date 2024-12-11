@@ -93,10 +93,10 @@ class StudentDriver(Driver):
 			#reset_veer = True
 			command.linear.x = 0
 			command.angular.z = tanh(-bot_unbounded_lidar_theta)
-			if abs(bot_theta_obj - thetas[-1]) < 0.5:
-				#if there is no object in the front
-				command.angular.z = 0
-				command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
+			# if abs(bot_theta_obj - thetas[-1]) < 0.5:
+			# 	#if there is no object in the front
+			# 	command.angular.z = 0
+			# 	command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
 		# else:
         # 	# no obstacles
 		# 	if self.count_veer > 0:
