@@ -122,8 +122,13 @@ if __name__ == '__main__':
 	rospy.init_node('send_points', argv=sys.argv)
 
 	# Create a list of points on a circle. In __init__, this is turned into a list of PointStamped
-	points = [(2 * np.cos(theta), 2 * np.sin(theta)) for theta in np.linspace(0.0, 2 * np.pi, 15)]
+	#points = [(2 * np.cos(theta), 2 * np.sin(theta)) for theta in np.linspace(0.0, 2 * np.pi, 15)]
 
+	#points = [(-0.75, -3.5)] #Xc
+	#points = [(-6.4, -6)] #Xb
+	#points = [(-4, -3.75)] #Xa
+	points = [(4.75, 0.0)] #XA
+	#points = [(2.15, -0.25)] #XB
 	# Create the class above, initialized with the set of points
 	sender = SendPoints(points)
 

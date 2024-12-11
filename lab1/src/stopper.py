@@ -9,8 +9,6 @@
 import rospy
 import sys
 
-
-
 # We're going to do some math
 import numpy as np
 
@@ -33,8 +31,8 @@ def callback(scan):
 	# Pulling out some useful values from scan
 	angle_min = scan.angle_min
 	angle_max = scan.angle_max
-	num_readings = len(scan.ranges) # ranges is a np array, the distances as you go around from min to max, scan.ranges is the r
-	#sin(theta) * r is the y distance all that
+	num_readings = len(scan.ranges)
+
 	# Doing this for you - get out theta values for each range/distance reading
 	thetas = np.linspace(angle_min, angle_max, num_readings)
 
@@ -43,7 +41,7 @@ def callback(scan):
 	#    Remember that robot scans are in the robot's coordinate system - theta = 0 means straight ahead
 	#  Step 2: Get the minimum distance to the closest object (use only scans "in front of" the robot)
 	#  Step 3: Use the closest distance from above to decide when to stop
-	#  Step 4: Scale how fast you move by the distance to the closet object (tanh is handy here...)
+	#  Step 4: Scale how fast you move by the distance to the closest object (tanh is handy here...)
 	#  Step 5: Make sure to actually stop if close to 1 m
 	# Finally, set t.linear.x to be your desired speed (0 if stop)
 	# Suggestion: Do this with a for loop before being fancy with numpy (which is substantially faster)
@@ -51,12 +49,12 @@ def callback(scan):
 
 	# Create a twist and fill in all the fields (you will only set t.linear.x).
 	t = Twist()
-	t.linear.x = 3.0 #if 0, robot will not move so it's how fast you move fwd
+	t.linear.x = 0.0 #if 0, robot will not move so it's how fast you move fwd
 	t.linear.y = 0.0
 	t.linear.z = 0.0
 	t.angular.x = 0.0
 	t.angular.y = 0.0
-	t.angular.z = 0.0 #how fast you turn
+	t.angular.z = 0.0 #/ how fast you turn
 
 	#shortest = 0 #can set to closest thing you found in front of you ?
  # YOUR CODE HERE
@@ -85,6 +83,9 @@ def callback(scan):
 
 	# Print out a log message to the INFO channel to let us know it's working.
 	rospy.loginfo(f'Shortest: {shortest} => {t.linear.x}')
+	#rospy.loginfo(f'angle_min = {angle_min} angle_max = {angle_max}')
+	#rospy.loginfo(f'num_readings = {num_readings}')
+	#rospy.loginfo(f'thetas = {thetas}')
 
 
 if __name__ == '__main__':
