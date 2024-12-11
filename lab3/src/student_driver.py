@@ -7,7 +7,7 @@ import numpy as np
 
 from new_driver import Driver
 
-from math import atan2, sqrt, tanh, sin																						`` tanh, sin
+from math import atan2, sqrt, tanh, sin
 
 
 class StudentDriver(Driver):
