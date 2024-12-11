@@ -98,7 +98,7 @@ class StudentDriver(Driver):
 			# 	#if there is no object in the front
 			# 	command.angular.z = 0
 			# 	command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
-			dot_corner_det = 
+
 		# else:
         # 	# no obstacles
 		# 	if self.count_veer > 0:
