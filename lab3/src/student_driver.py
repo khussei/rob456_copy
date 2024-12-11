@@ -77,19 +77,20 @@ class StudentDriver(Driver):
 		if distance < unbounded_shortest:
 			#if distance to goal is shorter than distance to anything else within lidar ranges
 				#go towards goal!
+			rospy.loginfo("going straight to goal!")
 			command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
 			command.angular.z = tanh(theta_g)  # Turn toward the goal
 		elif shortest < d_slow_down:
         	# obstacle in front
 				#move away from it
-			print("obstruction directly in front")
+			rospy.loginfo("obstruction directly in front")
 			#reset_veer = True
 			command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
 			command.angular.z = tanh(-bot_theta_obj)
 		elif unbounded_shortest < params['bot_width']:
         	# obstacle on side
 				#pivot and don't move forward until there is nothing in front of you
-			print("Too close to an obstacle on the side!")
+			rospy.loginfo("Too close to an obstacle on the side!")
 			#reset_veer = True
 			command.linear.x = 0
 			command.angular.z = tanh(-bot_unbounded_lidar_theta)
@@ -97,6 +98,7 @@ class StudentDriver(Driver):
 			# 	#if there is no object in the front
 			# 	command.angular.z = 0
 			# 	command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
+			dot_corner_det = 
 		# else:
         # 	# no obstacles
 		# 	if self.count_veer > 0:
