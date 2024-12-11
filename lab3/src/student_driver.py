@@ -86,7 +86,7 @@ class StudentDriver(Driver):
 			rospy.loginfo("obstruction directly in front")
 			#reset_veer = True
 			command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
-			command.angular.z = tanh(-bot_theta_obj)
+			command.angular.z = tanh(bot_theta_obj)
 		elif unbounded_shortest < params['bot_width']:
         	# obstacle on side
 				#pivot and don't move forward until there is nothing in front of you
@@ -103,10 +103,6 @@ class StudentDriver(Driver):
         # 	# no obstacles
 		# 	if self.count_veer > 0:
 		# 		self.count_veer -= 1
-			# else:
-			# 	print("moving straight towards the goal!")
-			# 	command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
-			# 	command.angular.z = tanh(theta_g)  # Turn toward the goal
 
     	# # only reset veer if needed
 		# if reset_veer and self.count_veer == 0:
