@@ -51,16 +51,35 @@ def callback(scan):
 
 	# Create a twist and fill in all the fields (you will only set t.linear.x).
 	t = Twist()
-	t.linear.x = 0.0 #if 0, robot will not move so it's how fast you move fwd
+	t.linear.x = 3.0 #if 0, robot will not move so it's how fast you move fwd
 	t.linear.y = 0.0
 	t.linear.z = 0.0
 	t.angular.x = 0.0
 	t.angular.y = 0.0
 	t.angular.z = 0.0 #how fast you turn
 
-	shortest = 0 #can set to closest thing you found in front of you ?
+	#shortest = 0 #can set to closest thing you found in front of you ?
  # YOUR CODE HERE
+	bot_width = 0.38 #m
+	r_stop = 1 + bot_width/2 #m, so 1.19m
+	v_max = 0.30 #m/s
+	t_to_stop = 3 #s, responsiveness -- time required to stop
+	d_slow_down = v_max * t_to_stop
 
+	y_dists = np.zeros(num_readings)
+	relevant_rs = []
+	for i, r in enumerate(scan.ranges):
+		y_dists[i] = r * np.sin(thetas[i]) #thetas in radians
+		if abs(y_dists[i]) <= bot_width:
+			#obstruction found in front of bot
+			relevant_rs.append(r)
+	shortest = min(relevant_rs)
+
+	if shortest <= r_stop: #if the shortest distance to an object is less than 1.19m
+		t.linear.x = 0 #stop moving
+	else: #move and then slow to a stop
+		t.linear.x = v_max * (1 + np.tanh((shortest - r_stop) / d_slow_down))
+ 
 	# Send the command to the robot.
 	publisher.publish(t)
 

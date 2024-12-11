@@ -3,7 +3,7 @@
 
 import rospy
 import sys
-
+import numpy as np
 from math import atan2, tanh, sqrt, pi
 
 from nav_msgs.msg import Odometry
@@ -23,7 +23,7 @@ class Driver:
 		# Goal will be set later. The action server will set the goal; you don't set it directly
 		self.goal = None
 		self.threshold = threshold
-
+		self.count_veer = 0 #tracks veering actions to avoid rapid direction changes
 		self.transform_listener = tf.TransformListener()
 
 		# Publisher before subscriber
@@ -132,6 +132,13 @@ class Driver:
 	# 	lidar:	a LaserScan message with the current data from the LiDAR.  Use this for obstacle avoidance.
 	#           This is the same as your go and stop code
 	def get_twist(self, target, lidar):
+		# Bot Parameters:
+		#	lidar_max: lidar captures this distance around bot [m]
+		#	v_max: maximum forward speed [m/s]
+		#	t_to_closest: time to slow down in -- responsiveness [s]
+		#	r_closest: maximum distance allowed to an opject [m]
+		params = {'bot_width':0.38, 'lidar_max': 8.0, 'v_max': 0.30, 't_to_closest': 3, 'r_closest': 1.19}
+		
 		command = Driver.zero_twist()
 
 		# TODO:
@@ -144,7 +151,63 @@ class Driver:
 		command.angular.z = 0.1
 
   # YOUR CODE HERE
+		# prepping the lidar's thetas for later use
+		angle_min, angle_max, num_readings = lidar.angle_min, lidar.angle_max, len(lidar.ranges)
+		thetas = np.linspace(angle_min, angle_max, num_readings) # the lidar's thetas (consistent)
+		front_mindex, front_maxdex = round(num_readings / 4), round(3 * num_readings / 4)
+		# prepping given target
+		target_x, target_y = target
+		theta_g = atan2(target_y, target_x)
 
+		#robot movement calcs from parameters
+		d_slow_down = params['v_max'] * params['t_to_closest'] # distance bot will slow to a stop
+		turn_radius =  params['bot_width'] * 1.5
+		omega_max = params['v_max'] / turn_radius
+
+		# figuring out shortest distance to an obstruction within the relevant front of lidar scope
+		relevant_rs, relevant_thetas = [],[]
+		for i, r in enumerate(lidar.ranges):
+			y_dist = r * np.sin(thetas[i])
+			if abs(y_dist) <= params['r_closest']:
+				if front_mindex <= i < front_maxdex:
+				#obstruction found in front of bot
+					relevant_rs.append(r)
+					relevant_thetas.append(thetas[i])
+		unbounded_shortest = min(lidar.ranges, default=params['lidar_max'])
+		shortest = min(relevant_rs, default=params['lidar_max'])
+		bot_theta_obj = relevant_thetas[relevant_rs.index(shortest)] if relevant_rs else thetas[-1]
+		
+		# default commands and distance to target
+		command.linear.x = params['v_max']
+		command.angular.z = 0
+		distance = sqrt(target_x ** 2 + target_y ** 2)
+		
+		# Obstacle avoidance logic
+		reset_veer = False
+		if shortest < d_slow_down:
+        	# obstacle in front
+			print("obstruction directly in front")
+			reset_veer = True
+			command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
+			command.angular.z = tanh(-bot_theta_obj / turn_radius)
+		elif unbounded_shortest < turn_radius and distance > unbounded_shortest:
+        	# obstacle on side
+			print("Too close to an obstacle on the side!")
+			reset_veer = True
+			command.angular.z = tanh(-bot_theta_obj / turn_radius)
+		else:
+        	# no obstacles
+			if self.count_veer > 0:
+				self.count_veer -= 1
+			else:
+				print("moving straight towards the goal!")
+				command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
+				command.angular.z = tanh(theta_g / turn_radius)  # Turn toward the goal
+
+    	# only reset veer if needed
+		if reset_veer and self.count_veer == 0:
+			self.count_veer = 3
+		
 		return command
 
 if __name__ == '__main__':

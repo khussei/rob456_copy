@@ -199,11 +199,31 @@ def dijkstra(im, robot_loc, goal_loc):
         #  https://docs.google.com/presentation/d/1pt8AcSKS2TbKpTAVV190pRHgS_M38ldtHQHIltcYH6Y/edit#slide=id.g18d0c3a1e7d_0_0
         # YOUR CODE HERE
 
+        def is_valid_node(im, node):
+            #check if a node is not in a wall, within bounds, and free space
+            i, j = node
+            return 0 <= i < im.shape[1] and 0 <= j < im.shape[0] and is_free(im,node)
+        
+        if node_ij == goal_loc: break #if the current node is the same as the goal node #you're done, now you need to build the path back
+        if visited_closed_yn: continue #skip node if already closed
+        visited[node_ij] = (visited_distance, visited_parent, True) #otherwise, close it now
+        
+        for i, neighbor in enumerate(eight_connected(node_ij)):
+            if not is_valid_node(im, neighbor): #skip nodes in wall/out of bounds
+                continue
+            edge_cost = np.sqrt((node_ij[0] - neighbor[0])**2 + (node_ij[1] - neighbor[1])**2)
+            neighbor_score = node_score + edge_cost #distance to neighbor
+            
+            if neighbor not in visited or neighbor_score < visited[neighbor][0]:
+            #if neighbor hasn't been visited or we found a better path, update it
+                visited[neighbor] = (neighbor_score, node_ij, False) #update
+                heapq.heappush(priority_queue, (neighbor_score, neighbor)) #add to priority q
+                
     # Now check that we actually found the goal node
     try_2 = goal_loc
     if not goal_loc in visited:
         # TODO: Deal with not being able to get to the goal loc
-        # BEGIN SOLULTION
+        # BEGIN SOLUTION
         best = 1e30
         for v in visited:
             if v[0] < best:
@@ -217,7 +237,12 @@ def dijkstra(im, robot_loc, goal_loc):
     path.append(goal_loc)
     # TODO: Build the path by starting at the goal node and working backwards
     # YOUR CODE HERE
-
+    reverse_path = []
+    current = goal_loc
+    while current is not None: #start at goal and go backwards to start
+        reverse_path.append(current) #add current node to path
+        current = visited[current][1] #move to parent of current
+    path = reverse_path[::-1] #r-r-reverse
     return path
 
 
