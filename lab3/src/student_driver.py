@@ -99,7 +99,7 @@ class StudentDriver(Driver):
 			else:
 				print("moving straight towards the goal!")
 				command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
-				command.angular.z = tanh(theta_g / turn_radius)  # Turn toward the goal
+				command.angular.z = tanh(theta_g)  # Turn toward the goal
 
     	# only reset veer if needed
 		if reset_veer and self.count_veer == 0:
