@@ -92,6 +92,8 @@ class StudentDriver(Driver):
 			print("Too close to an obstacle on the side!")
 			reset_veer = True
 			command.angular.z = tanh(-bot_unbounded_lidar_theta)
+			if bot_theta_obj - thetas[-1] < 0.5:
+				command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
 		else:
         	# no obstacles
 			if self.count_veer > 0:
