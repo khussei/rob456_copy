@@ -98,6 +98,10 @@ class StudentDriver(Driver):
 			# 	#if there is no object in the front
 			# 	command.angular.z = 0
 			# 	command.linear.x = params['v_max'] * tanh(shortest / d_slow_down)
+		else:
+			rospy.loginfo("nothing in front -- going straight to goal!")
+			command.linear.x = params['v_max'] * tanh(distance / d_slow_down)
+			command.angular.z = tanh(theta_g)  # Turn toward the goal
 
 		# else:
         # 	# no obstacles
